@@ -19,10 +19,30 @@ function DonorDashboard() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Form submitted:", formData);
-    // Add your form submission logic here
+
+    // Send form data to backend
+    try {
+      const response = await fetch('http://localhost:5000/api/food', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        alert(result.message);
+      } else {
+        alert('Error: ' + result.message);
+      }
+    } catch (error) {
+      console.error("Error sending data:", error);
+      alert('Error sending data to server');
+    }
   };
 
   return (

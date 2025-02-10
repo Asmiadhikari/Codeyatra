@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -12,10 +15,10 @@ const SignUp = () => {
     recipientType: "",
     latitude: "",
     longitude: "",
-    location: "", 
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [mapCenter, setMapCenter] = useState([27.7172, 85.324]); // Default Kathmandu
+  const [showMap, setShowMap] = useState(false);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -30,8 +33,9 @@ const SignUp = () => {
             ...prevState,
             latitude,
             longitude,
-            location: `${latitude}, ${longitude}`, // You can store this location or omit if not needed
           }));
+          setMapCenter([latitude, longitude]);
+          setShowMap(true);
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -44,33 +48,30 @@ const SignUp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-
     try {
       const response = await fetch("http://localhost:5000/api/auth/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
-
-      const data = await response.json();
-      setIsLoading(false);
 
       if (response.ok) {
         alert("Signup successful!");
         navigate("/login");
       } else {
+        const data = await response.json();
         alert(`Error: ${data.message}`);
       }
     } catch (error) {
       console.error("Signup failed", error);
-      setIsLoading(false);
     }
   };
+
+  const markerIcon = new L.Icon({
+    iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+  });
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -79,62 +80,112 @@ const SignUp = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Name
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Name</label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
               placeholder="Enter your name"
             />
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
               placeholder="Enter your email"
             />
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Password</label>
             <input
               type="password"
               name="password"
               value={formData.password}
               onChange={handleInputChange}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
               placeholder="Enter your password"
             />
           </div>
 
-          {/* Location */}
+          {/* Contact */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Contact</label>
+            <input
+              type="tel"
+              name="contact"
+              value={formData.contact}
+              onChange={handleInputChange}
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Enter your contact number"
+            />
+          </div>
+
+          {/* User Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">User Type</label>
+            <select
+              name="userType"
+              value={formData.userType}
+              onChange={handleInputChange}
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">Select User Type</option>
+              <option value="donor">Donor</option>
+              <option value="receiver">Receiver</option>
+            </select>
+          </div>
+
+          {/* Recipient Type (Only if Receiver) */}
+          {formData.userType === "receiver" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Recipient Type</label>
+              <select
+                name="recipientType"
+                value={formData.recipientType}
+                onChange={handleInputChange}
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Select Recipient Type</option>
+                <option value="orphanage">Orphanage</option>
+                <option value="shelter">Shelter</option>
+                <option value="ngo">NGO</option>
+                <option value="poultry farming">Poultry Farming</option>
+              </select>
+            </div>
+          )}
+
+          {/* Location Inputs */}
           <div className="flex space-x-2">
             <input
-              id="location"
-              name="location"
+              name="latitude"
               type="text"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
-              placeholder="Enter your location"
-              value={formData.location}
+              className="w-1/2 px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Latitude"
+              value={formData.latitude}
+              onChange={handleInputChange}
+            />
+            <input
+              name="longitude"
+              type="text"
+              className="w-1/2 px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Longitude"
+              value={formData.longitude}
               onChange={handleInputChange}
             />
             <button
@@ -146,86 +197,38 @@ const SignUp = () => {
             </button>
           </div>
 
-          {/* Contact */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Contact
-            </label>
-            <input
-              type="tel"
-              name="contact"
-              value={formData.contact}
-              onChange={handleInputChange}
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Enter your contact number"
-            />
-          </div>
-
-          {/* User Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              User Type
-            </label>
-            <select
-              name="userType"
-              value={formData.userType}
-              onChange={handleInputChange}
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          {/* Map - Only Show After Clicking "Use Current Location" */}
+          {showMap && (
+            <MapContainer
+              center={mapCenter}
+              zoom={13}
+              style={{ height: "250px", width: "100%", borderRadius: "10px" }}
             >
-              <option value="">Select User Type</option>
-              <option value="donor">Donor</option>
-              <option value="receiver">Receiver</option>
-            </select>
-          </div>
-
-          {/* Recipient Type (Only if Receiver) */}
-          {formData.userType === "receiver" && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Recipient Type
-              </label>
-              <select
-                name="recipientType"
-                value={formData.recipientType}
-                onChange={handleInputChange}
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <Marker
+                position={mapCenter}
+                icon={markerIcon}
+                draggable={true} // Allow dragging
+                eventHandlers={{
+                  dragend: (e) => {
+                    const { lat, lng } = e.target.getLatLng();
+                    setFormData((prevState) => ({
+                      ...prevState,
+                      latitude: lat.toFixed(6),
+                      longitude: lng.toFixed(6),
+                    }));
+                    setMapCenter([lat, lng]); // Move marker to new position
+                  },
+                }}
               >
-                <option value="">Select Recipient Type</option>
-                <option value="orphanage">Orphanage</option>
-                <option value="shelter">Shelter</option>
-                <option value="ngo">NGO</option>
-                <option value="poultry farming">Poultry Farming</option>
-              </select>
-            </div>
+                <Popup>Drag to select your location</Popup>
+              </Marker>
+            </MapContainer>
           )}
 
           {/* Submit Button */}
-          <button
-            type="submit"
-            className={`w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-teal-900 hover:bg-teal-700 focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 text-sm font-medium ${
-              !formData.name ||
-              !formData.email ||
-              !formData.password ||
-              !formData.contact ||
-              !formData.userType ||
-              (formData.userType === "receiver" && !formData.recipientType)
-                ? "opacity-50 cursor-not-allowed"
-                : ""
-            }`}
-            disabled={
-              isLoading ||
-              !formData.name ||
-              !formData.email ||
-              !formData.password ||
-              !formData.contact ||
-              !formData.userType ||
-              (formData.userType === "receiver" && !formData.recipientType)
-            }
-          >
-            {isLoading ? "Signing Up..." : "Sign Up"}
+          <button type="submit" className="w-full py-2 px-4 border border-transparent rounded-md bg-teal-900 text-white">
+            Sign Up
           </button>
         </form>
       </div>
