@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
-const dbUserName = "Asmi";
-const dbPassword = encodeURIComponent("asmi123");
-const dbHost = "asmi.wdnvneq.mongodb.net";
-const dbName = "User";
-const dbOptions = "retryWrites=true&w=majority&appName=Asmi";
+const dbUserName = "Alina";
+const dbPassword ="89FzopOqnUfmpcIg";
+const dbHost = "alina.rzdrsdl.mongodb.net";
+const dbName = "Donor";
+const dbOptions = "retryWrites=true&w=majority&appName=Alina";
 
 const connectDB = async () => {
   try {

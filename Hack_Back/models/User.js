@@ -6,7 +6,14 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   contact: { type: String, required: true },
   userType: { type: String, enum: ["donor", "receiver"], required: true },
-  recipientType: { type: String, enum: ["orphanage", "shelter", "ngo", "poultry farming"], required: function () { return this.userType === "receiver"; } },
+  recipientType: {
+    type: String,
+    default: null,
+    enum: ["","orphanage", "shelter", "ngo", "poultry farming"],
+    // function() {
+    //   return this.userType === "receiver";
+    // },
+  },
   latitude: { type: Number, required: true },
   longitude: { type: Number, required: true },
 });

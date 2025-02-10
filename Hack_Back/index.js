@@ -17,6 +17,43 @@ app.use(express.json());
 // Connect to Database
 connectDB();
 
+
+const foodSchema = new mongoose.Schema({
+  foodItem: String,
+  quantity: Number,
+  foodType: String,
+  pickupDate: String,
+  pickupTime: String,
+  urgency: String,
+  proximity: Number,
+});
+
+const Food = mongoose.model('Food', foodSchema);
+
+// POST Route to save food data
+app.post('/api/food', async (req, res) => {
+  try {
+    const { foodItem, quantity, foodType, pickupDate, pickupTime, urgency, proximity } = req.body;
+
+    const newFood = new Food({
+      foodItem,
+      quantity,
+      foodType,
+      pickupDate,
+      pickupTime,
+      urgency,
+      proximity,
+    });
+
+    await newFood.save();
+    res.status(201).json({ message: 'Food details saved successfully!' });
+  } catch (error) {
+    console.error('Error saving food data:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+
 // Routes
 app.use("/api/auth", authRoutes);
 
