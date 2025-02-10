@@ -1,15 +1,19 @@
 import { useState } from "react";
 
+import { useNavigate } from "react-router-dom"; // Import for navigation
+
 function DonorDashboard() {
+  const navigate = useNavigate(); // Hook for redirection
+
   const [formData, setFormData] = useState({
     foodItem: "",
     quantity: "",
-    foodType: "Cooked Meal",
     pickupDate: "",
     pickupTime: "",
-    urgency: "Low",
     proximity: "",
   });
+
+  const [selectedPage, setSelectedPage] = useState("donateFood");
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -21,41 +25,64 @@ function DonorDashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
 
-    // Send form data to backend
+    const token = localStorage.getItem("token"); // Assuming donorId is stored in localStorage
+    console.log("token", token);
+    
+
+    if (!token) {
+      alert("Donor ID is missing.");
+      return;
+    }
+
     try {
-      const response = await fetch('http://localhost:5000/api/food', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await fetch(
+        "http://localhost:5000/api/food/donate-food",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...formData,
+            token, // Include the donorId in the request body
+          }),
+        }
+      );
 
       const result = await response.json();
+
       if (response.ok) {
-        alert(result.message);
+        alert("Food donation successful!");
+        setFormData({
+          foodItem: "",
+          quantity: "",
+          pickupDate: "",
+          pickupTime: "",
+          proximity: "",
+        }); // Reset the form
       } else {
-        alert('Error: ' + result.message);
+        alert(`Error: ${result.error || "An error occurred."}`);
       }
     } catch (error) {
-      console.error("Error sending data:", error);
-      alert('Error sending data to server');
+      console.error("Error during submission:", error);
+      alert("Network error. Please try again later.");
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
-      <div className="w-full max-w-lg bg-white p-8 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">
-          Donor Dashboard
-        </h2>
+  const handleLogout = () => {
+    navigate("/"); // Redirect to the home page
+  };
 
+  const renderPageContent = () => {
+    if (selectedPage === "donateFood") {
+      return (
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Food Item */}
-          <div className="space-y-2">
-            <label className="block text-gray-700" htmlFor="foodItem">
+          <div className="space-y-4">
+            <label
+              className="block text-gray-700 font-semibold text-lg"
+              htmlFor="foodItem"
+            >
               Food Item
             </label>
             <input
@@ -64,16 +91,18 @@ function DonorDashboard() {
               name="foodItem"
               value={formData.foodItem}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="Enter food item"
               required
             />
           </div>
 
-          {/* Quantity */}
-          <div className="space-y-2">
-            <label className="block text-gray-700" htmlFor="quantity">
-              Quantity
+          <div className="space-y-4">
+            <label
+              className="block text-gray-700 font-semibold text-lg"
+              htmlFor="quantity"
+            >
+              Quantity (kg or units)
             </label>
             <input
               type="number"
@@ -81,35 +110,17 @@ function DonorDashboard() {
               name="quantity"
               value={formData.quantity}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="Enter quantity"
               required
             />
           </div>
 
-          {/* Food Type */}
-          <div className="space-y-2">
-            <label className="block text-gray-700" htmlFor="foodType">
-              Food Type
-            </label>
-            <select
-              id="foodType"
-              name="foodType"
-              value={formData.foodType}
-              onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
+          <div className="space-y-4">
+            <label
+              className="block text-gray-700 font-semibold text-lg"
+              htmlFor="pickupDate"
             >
-              <option value="Cooked Meal">Cooked Meal</option>
-              <option value="Fresh Produce">Fresh Produce</option>
-              <option value="Bread and Pastries">Bread and Pastries</option>
-              <option value="Canned Goods">Canned Goods</option>
-            </select>
-          </div>
-
-          {/* Pickup Date */}
-          <div className="space-y-2">
-            <label className="block text-gray-700" htmlFor="pickupDate">
               Pickup Date
             </label>
             <input
@@ -118,14 +129,16 @@ function DonorDashboard() {
               name="pickupDate"
               value={formData.pickupDate}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               required
             />
           </div>
 
-          {/* Pickup Time */}
-          <div className="space-y-2">
-            <label className="block text-gray-700" htmlFor="pickupTime">
+          <div className="space-y-4">
+            <label
+              className="block text-gray-700 font-semibold text-lg"
+              htmlFor="pickupTime"
+            >
               Pickup Time
             </label>
             <input
@@ -134,14 +147,16 @@ function DonorDashboard() {
               name="pickupTime"
               value={formData.pickupTime}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               required
             />
           </div>
 
-          {/* Proximity */}
-          <div className="space-y-2">
-            <label className="block text-gray-700" htmlFor="proximity">
+          <div className="space-y-4">
+            <label
+              className="block text-gray-700 font-semibold text-lg"
+              htmlFor="proximity"
+            >
               Proximity (in km)
             </label>
             <input
@@ -150,7 +165,7 @@ function DonorDashboard() {
               name="proximity"
               value={formData.proximity}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="Enter proximity in kilometers"
               required
             />
@@ -158,11 +173,93 @@ function DonorDashboard() {
 
           <button
             type="submit"
-            className="w-full py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition duration-200"
+            className="w-full py-3 bg-teal-600 text-white font-semibold rounded-lg shadow-lg hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-500 transition duration-300 text-lg"
           >
             Submit
           </button>
         </form>
+      );
+    } else if (selectedPage === "leaderboards") {
+      return (
+        <div className="text-center text-xl font-semibold text-teal-700">
+          Leaderboards will be displayed here.
+        </div>
+      );
+    } else if (selectedPage === "donationHistory") {
+      return (
+        <div className="text-center text-xl font-semibold text-teal-700">
+          Your donation history will be shown here.
+        </div>
+      );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-r from-teal-100 via-teal-200 to-teal-300 flex">
+      {/* Sidebar */}
+      <div className="w-1/4 bg-teal-600 text-white p-8 flex flex-col items-center">
+        {/* Single-line heading */}
+        <h2 className="text-3xl font-bold text-center mb-6">Donor Dashboard</h2>
+
+        <ul className="w-full">
+          <li>
+            <button
+              className={`w-full text-left py-3 px-6 text-lg rounded-lg focus:outline-none transition duration-300 ${
+                selectedPage === "donateFood"
+                  ? "bg-teal-700"
+                  : "hover:bg-teal-700"
+              }`}
+              onClick={() => setSelectedPage("donateFood")}
+            >
+              Donate Food
+            </button>
+          </li>
+
+          {/* Separator */}
+          <hr className="my-4 border-gray-300 w-full" />
+
+          <li>
+            <button
+              className={`w-full text-left py-3 px-6 text-lg rounded-lg focus:outline-none transition duration-300 ${
+                selectedPage === "leaderboards"
+                  ? "bg-teal-700"
+                  : "hover:bg-teal-700"
+              }`}
+              onClick={() => setSelectedPage("leaderboards")}
+            >
+              Check Leaderboards
+            </button>
+          </li>
+
+          {/* Separator */}
+          <hr className="my-4 border-gray-300 w-full" />
+
+          <li>
+            <button
+              className={`w-full text-left py-3 px-6 text-lg rounded-lg focus:outline-none transition duration-300 ${
+                selectedPage === "donationHistory"
+                  ? "bg-teal-700"
+                  : "hover:bg-teal-700"
+              }`}
+              onClick={() => setSelectedPage("donationHistory")}
+            >
+              Donation History
+            </button>
+          </li>
+        </ul>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="mt-auto w-full py-3 bg-[#8B322C] text-white font-semibold rounded-lg shadow-lg hover:bg-[#732722] focus:outline-none focus:ring-4 focus:ring-[#5A1D19] transition duration-300 text-lg"
+        >
+          Logout
+        </button>
+      </div>
+
+      {/* Content Area */}
+      <div className="w-3/4 p-8 bg-white shadow-lg rounded-lg">
+        {renderPageContent()}
       </div>
     </div>
   );

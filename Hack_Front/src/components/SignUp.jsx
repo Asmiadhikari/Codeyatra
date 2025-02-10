@@ -122,7 +122,9 @@ const SignUp = () => {
 
           {/* Contact */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Contact</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Contact
+            </label>
             <input
               type="tel"
               name="contact"
@@ -136,7 +138,9 @@ const SignUp = () => {
 
           {/* User Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">User Type</label>
+            <label className="block text-sm font-medium text-gray-700">
+              User Type
+            </label>
             <select
               name="userType"
               value={formData.userType}
@@ -168,6 +172,62 @@ const SignUp = () => {
                 <option value="poultry farming">Poultry Farming</option>
               </select>
             </div>
+          )}
+
+          {/* Location Inputs */}
+          <div className="flex space-x-2">
+            <input
+              name="latitude"
+              type="text"
+              className="w-1/2 px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Latitude"
+              value={formData.latitude}
+              onChange={handleInputChange}
+            />
+            <input
+              name="longitude"
+              type="text"
+              className="w-1/2 px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Longitude"
+              value={formData.longitude}
+              onChange={handleInputChange}
+            />
+            <button
+              type="button"
+              onClick={getCurrentLocation}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md text-sm"
+            >
+              Use Current Location
+            </button>
+          </div>
+
+          {/* Map - Only Show After Clicking "Use Current Location" */}
+          {showMap && (
+            <MapContainer
+              center={mapCenter}
+              zoom={13}
+              style={{ height: "250px", width: "100%", borderRadius: "10px" }}
+            >
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <Marker
+                position={mapCenter}
+                icon={markerIcon}
+                draggable={true} // Allow dragging
+                eventHandlers={{
+                  dragend: (e) => {
+                    const { lat, lng } = e.target.getLatLng();
+                    setFormData((prevState) => ({
+                      ...prevState,
+                      latitude: lat.toFixed(6),
+                      longitude: lng.toFixed(6),
+                    }));
+                    setMapCenter([lat, lng]); // Move marker to new position
+                  },
+                }}
+              >
+                <Popup>Drag to select your location</Popup>
+              </Marker>
+            </MapContainer>
           )}
 
           {/* Location Inputs */}

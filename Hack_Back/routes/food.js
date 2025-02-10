@@ -1,41 +1,49 @@
-// routes/food.js
-import express from "express";
-import FoodDonation from "../models/FoodDonation.js";
+import DonatedFood from "../models/DonatedFood.js";
+import jwt from "jsonwebtoken";
+import User from "../models/User.js"; // Assuming you need to find the donor by email
 
-const router = express.Router();
+// Example function to create a new donation
+export default async function donateFood(req, res) {
+  const {
+    foodItem,
+    foodType,
+    quantity,
+    pickupDate,
+    pickupTime,
+    proximity,
+    availableUntil,
+    donorEmail,
+    token,
+  } = req.body;
 
-// Create a new food donation entry
-router.post("/donate", async (req, res) => {
   try {
-    const { foodItem, quantity, foodType, pickupDate, pickupTime, urgency, proximity } = req.body;
+    // Find the donor by email (or any other field that identifies the donor)
+    
+      const decode = jwt.verify(token, "yourSecretKey");
+    const donor = await User.findOne({ email: decode.email });
 
-    const newDonation = new FoodDonation({
+    if (!donor) {
+      return res.status(400).json({ error: "Donor not found" });
+    }
+
+    // Create a new DonatedFood document with the donor's _id
+    const newDonation = new DonatedFood({
+      donor: decode.userId, // Assign donor's _id here
       foodItem,
-      quantity,
       foodType,
+      quantity,
       pickupDate,
       pickupTime,
-      urgency,
       proximity,
+      availableUntil,
     });
 
+    // Save the donation
     await newDonation.save();
-    res.status(201).json({ message: "Food donation recorded successfully", donation: newDonation });
-  } catch (error) {
-    console.error("Error in food donation:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
 
-// Get all food donations
-router.get("/", async (req, res) => {
-  try {
-    const donations = await FoodDonation.find().sort({ createdAt: -1 });
-    res.status(200).json(donations);
+    res.status(201).json({ message: "Food donation successfully recorded" });
   } catch (error) {
-    console.error("Error fetching donations:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error(error);
+    res.status(500).json({ error: "Failed to record the donation" });
   }
-});
-
-export default router;
+}
