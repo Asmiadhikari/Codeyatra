@@ -1,6 +1,6 @@
 import DonatedFood from "../models/DonatedFood.js";
 import jwt from "jsonwebtoken";
-import User from "../models/User.js"; // Assuming you need to find the donor by email
+import User from "../models/User.js"; 
 
 // Example function to create a new donation
 export default async function donateFood(req, res) {

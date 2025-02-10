@@ -1,110 +1,272 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css"; // Import Leaflet CSS
 
-// Mock donor data with coordinates
-const donors = [
-  { id: 1, name: "John Doe", foodType: "Vegetables", quantity: "10kg", location: "Kathmandu", contactNumber: "9876543210", availableUntil: "Feb 15, 2025", lat: 27.7172, lon: 85.3240 },
-  { id: 2, name: "Jane Smith", foodType: "Rice", quantity: "20kg", location: "Lalitpur", contactNumber: "9801234567", availableUntil: "Feb 20, 2025", lat: 27.6644, lon: 85.3188 },
-  { id: 3, name: "Mike Johnson", foodType: "Fruits", quantity: "5kg", location: "Bhaktapur", contactNumber: "9812345678", availableUntil: "Feb 18, 2025", lat: 27.6726, lon: 85.4298 },
-];
+// Define custom icons
+const blueIcon = new L.Icon({
+  iconUrl: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+});
 
-// Haversine formula to calculate distance between two coordinates
-const getDistance = (lat1, lon1, lat2, lon2) => {
-  const toRad = (value) => (value * Math.PI) / 180;
-  const R = 6371; // Earth radius in km
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // Distance in km
-};
+const redIcon = new L.Icon({
+  iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+});
 
 const ReceiverDashboard = () => {
-  const [filterDistance, setFilterDistance] = useState(10); // Default filter: 10 km
-  const userLocation = { lat: 27.7000, lon: 85.3333 }; // Kathmandu coordinates (replace with real user location)
+  const navigate = useNavigate();
+  const [filterDistance, setFilterDistance] = useState(5);
+  const [donors, setDonors] = useState([]);
+  const [error, setError] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [viewHistory, setViewHistory] = useState(false);
+  const [viewNotifications, setViewNotifications] = useState(false);
 
-  // Filter donors based on selected distance
-  const filteredDonors = donors.filter(
-    (donor) => getDistance(userLocation.lat, userLocation.lon, donor.lat, donor.lon) <= filterDistance
-  );
+  const userLocation = { lat: 27.7, lng: 85.3333 }; // Dummy user location
+
+  const getDistance = (lat1, lng1, lat2, lng2) => {
+    const toRad = (value) => (value * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  useEffect(() => {
+    const fetchDonors = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/donors");
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setDonors(data);
+      } catch (error) {
+        setError(`Failed to fetch donors: ${error.message}`);
+      }
+    };
+
+    fetchDonors();
+  }, []);
+
+  const handleLogout = () => {
+    navigate("/");
+  };
+
+  const handleAvailableClick = (id, latitude, longitude) => {
+    setSelectedLocation({ lat: latitude, lng: longitude });
+  };
+  const handleRequestHistory = () => {
+    setViewHistory(true);
+    setViewNotifications(false);
+    setSelectedLocation(false);
+  };
+
+  const handleNotifications = () => {
+    setViewNotifications(true);
+    setViewHistory(false);
+    setSelectedLocation(false);
+  };
+
+  const filteredDonors = donors.filter((donor) => {
+    const distance = getDistance(
+      userLocation.lat,
+      userLocation.lng,
+      donor.latitude,
+      donor.longitude
+    );
+    return distance <= filterDistance;
+  });
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif", maxWidth: "900px", margin: "auto" }}>
-      <h2 style={{ textAlign: "center", marginBottom: "20px", color: "#333" }}>Receiver Dashboard</h2>
-
-      {/* Dropdown for Distance Filter */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "15px" }}>
-        <label style={{ marginRight: "10px", fontWeight: "bold" }}>Filter by Distance:</label>
-        <select
-          value={filterDistance}
-          onChange={(e) => setFilterDistance(Number(e.target.value))}
-          style={{
-            padding: "8px",
-            border: "1px solid #ccc",
-            borderRadius: "5px",
-            cursor: "pointer"
-          }}
+    <div className="min-h-screen flex">
+      {/* Sidebar */}
+      <div className="w-1/4 bg-teal-700 text-white p-8 flex flex-col items-center shadow-lg justify-between">
+        <h2 className="text-3xl font-bold text-center mb-6">
+          Receiver Dashboard
+        </h2>
+        <ul className="w-full mb-auto">
+          <li>
+            <button
+              className="w-full text-left py-3 px-6 text-lg rounded-lg hover:bg-teal-700"
+              onClick={() => {
+                setViewHistory(false);
+                setViewNotifications(false);
+              }}
+            >
+              View Donors
+            </button>
+          </li>
+          <hr className="my-4 border-gray-300 w-full" />
+          <li>
+            <button
+              className="w-full text-left py-3 px-6 text-lg rounded-lg hover:bg-teal-700"
+              onClick={handleRequestHistory}
+            >
+              Request History
+            </button>
+          </li>
+          <hr className="my-4 border-gray-300 w-full" />
+          <li>
+            <button
+              className="w-full text-left py-3 px-6 text-lg rounded-lg hover:bg-teal-600"
+              onClick={handleNotifications}
+            >
+              Notifications
+            </button>
+          </li>
+          <hr className="my-4 border-gray-300 w-full" />
+        </ul>
+        <button
+          onClick={handleLogout}
+          className="mt-auto w-full py-3 bg-[#8B322C] text-white font-semibold rounded-lg shadow-lg hover:bg-[#732722] transition duration-300 text-lg"
         >
-          <option value="5">5 km</option>
-          <option value="10">10 km</option>
-          <option value="20">20 km</option>
-          <option value="50">50 km</option>
-        </select>
+          Logout
+        </button>
       </div>
 
-      {/* Donor Table */}
-      <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #ddd", boxShadow: "0px 0px 10px rgba(0, 0, 0, 0.1)" }}>
-        <thead>
-          <tr style={{ background: "teal", color: "white", textAlign: "left" }}>
-            <th style={{ padding: "10px" }}>Donor Name</th>
-            <th style={{ padding: "10px" }}>Food Type</th>
-            <th style={{ padding: "10px" }}>Quantity</th>
-            <th style={{ padding: "10px" }}>Location</th>
-            <th style={{ padding: "10px" }}>Contact Number</th>
-            <th style={{ padding: "10px" }}>Available Until</th>
-            <th style={{ padding: "10px" }}>Distance (km)</th>
-            <th style={{ padding: "10px" }}>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredDonors.length > 0 ? (
-            filteredDonors.map((donor) => (
-              <tr key={donor.id} style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>
-                <td style={{ padding: "10px" }}>{donor.name}</td>
-                <td style={{ padding: "10px" }}>{donor.foodType}</td>
-                <td style={{ padding: "10px" }}>{donor.quantity}</td>
-                <td style={{ padding: "10px" }}>{donor.location}</td>
-                <td style={{ padding: "10px" }}>{donor.contactNumber}</td>
-                <td style={{ padding: "10px" }}>{donor.availableUntil}</td>
-                <td style={{ padding: "10px", fontWeight: "bold" }}>{getDistance(userLocation.lat, userLocation.lon, donor.lat, donor.lon).toFixed(1)} km</td>
-                <td style={{ padding: "10px" }}>
-                  <button
-                    style={{
-                      background: "#28a745",
-                      color: "white",
-                      padding: "5px 10px",
-                      border: "none",
-                      borderRadius: "3px",
-                      cursor: "pointer",
-                      fontWeight: "bold"
-                    }}
-                  >
-                    Contact
-                  </button>
-                </td>
+      <div className="w-3/4 p-8">
+        {!viewHistory && !viewNotifications && (
+          <div className="mb-6">
+            <label htmlFor="filter-distance" className="mr-4 font-medium">
+              Filter by Distance:
+            </label>
+            <select
+              id="filter-distance"
+              value={filterDistance}
+              onChange={(e) => setFilterDistance(Number(e.target.value))}
+              className="p-2 border-2 border-teal-600 rounded-lg"
+            >
+              <option value="5">5 km</option>
+              <option value="10">10 km</option>
+              <option value="20">20 km</option>
+              <option value="50">50 km</option>
+            </select>
+          </div>
+        )}
+
+        <h2 className="text-2xl font-semibold mb-6">Available Donations</h2>
+
+        {error ? (
+          <p className="text-red-500">{error}</p>
+        ) : viewHistory ? (
+          <div>
+            <h2 className="text-center text-2xl font-semibold mb-6">
+              Request History
+            </h2>
+            <p>No request history yet.</p>
+          </div>
+        ) : viewNotifications ? (
+          <div>
+            <h2 className="text-center text-2xl font-semibold mb-6">
+              Notifications
+            </h2>
+            <p>No new notifications.</p>
+          </div>
+        ) : (
+          <table className="min-w-full bg-white shadow-lg rounded-lg">
+            <thead>
+              <tr className="bg-teal-600 text-white text-left">
+                <th className="py-3 px-6">Donor Name</th>
+                <th className="py-3 px-6">Food Type</th>
+                <th className="py-3 px-6">Quantity</th>
+                <th className="py-3 px-6">Location</th>
+                <th className="py-3 px-6">Contact Number</th>
+                <th className="py-3 px-6">Available Until</th>
+                <th className="py-3 px-6">Proximity</th>
+                <th className="py-3 px-6">Status</th>
               </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="8" style={{ textAlign: "center", padding: "10px", color: "#888" }}>
-                No donors found within {filterDistance} km.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {filteredDonors.length > 0 ? (
+                filteredDonors.map((donor) => (
+                  <tr key={donor.id} className="border-b">
+                    <td className="py-4 px-6">{donor.name}</td>
+                    <td className="py-4 px-6">{donor.foodType}</td>
+                    <td className="py-4 px-6">{donor.quantity}</td>
+                    <td className="py-4 px-6">
+                      {donor.location || "Location not available"}
+                    </td>
+                    <td className="py-4 px-6">{donor.contactNumber}</td>
+                    <td className="py-4 px-6">{donor.availableUntil}</td>
+                    <td className="py-4 px-6 font-bold">{donor.proximity}</td>
+                    <td className="py-4 px-6">
+                      <button
+                        onClick={() =>
+                          handleAvailableClick(
+                            donor.id,
+                            donor.latitude,
+                            donor.longitude
+                          )
+                        }
+                        className="bg-teal-600 text-white py-2 px-4 rounded-lg hover:bg-teal-500 transition duration-300"
+                      >
+                        Available
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" className="text-center py-4 text-gray-500">
+                    No donors available.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {selectedLocation && (
+        <div className="w-full h-96 mt-8">
+          <h3 className="text-xl font-semibold mb-4">Donor Location</h3>
+          <MapContainer
+            center={[
+              selectedLocation
+                ? (selectedLocation.lat + userLocation.lat) / 2
+                : userLocation.lat,
+              selectedLocation
+                ? (selectedLocation.lng + userLocation.lng) / 2
+                : userLocation.lng,
+            ]}
+            zoom={13}
+            style={{ width: "100%", height: "400px" }}
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            />
+
+            <Marker
+              position={[userLocation.lat, userLocation.lng]}
+              icon={blueIcon}
+            >
+              <Popup>You are here (Dummy Location)</Popup>
+            </Marker>
+
+            <Marker
+              position={[selectedLocation.lat, selectedLocation.lng]}
+              icon={redIcon}
+            >
+              <Popup>Donor Location</Popup>
+            </Marker>
+          </MapContainer>
+        </div>
+      )}
     </div>
   );
 };
