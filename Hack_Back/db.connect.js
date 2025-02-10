@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
-const dbUserName = "Asmi";
-const dbPassword = encodeURIComponent("asmi123");
+const dbUserName = "";
+const dbPassword = encodeURIComponent("");
 const dbHost = "asmi.wdnvneq.mongodb.net";
 const dbName = "User";
 const dbOptions = "retryWrites=true&w=majority&appName=Asmi";
